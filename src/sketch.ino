@@ -1,8 +1,6 @@
 /* ------------------------------------------------------------
  * MiniCar.ino
- * Latest edited: 2012/12/13 by Jing
- * Bug list:
- *  - Please read README.
+ * Latest edited: 2012/12/15 by Jing
  * ------------------------------------------------------------ */
 
 // Include Header
@@ -17,6 +15,8 @@ void whichDirectToTurn();
 void compassPID();
 void noCompassPID();
 double getAngle();
+void setTurnDirection();
+void goStraightAFewTime(int);
 // Initial ultrasound
 int usTrigPin = 7, usDangerDistance = 25;
 Ultrasound us(usTrigPin, &usDangerDistance);
@@ -61,50 +61,17 @@ void loop()
     {
         whichDirectToTurn();
         // Turn right/left until it's not in front.
-        if (turnLeft)
-            motors.setMotors(170, 0);
-        else
-            motors.setMotors(0, 170);
+        setTurnDirection();
         // delay 100 milli seconds while it's dangerous.
         while (us.isDanger())
-            delay(100);
-
-        /* ----- Go straight a few time -----*/
-        angleTemp = startAngle;
-        startAngle = getAngle();
-        // delay a few time and fetch angle again.
-        delay(10);
-        startAngle = getAngle();
-
-        unsigned long lastTime = millis();
-        int timeout = 500;
-
-        // go straight in 1 second.
-        do
-        {
-            // if find something in front.
-            if (us.isDanger())
-            {
-                // if ((startAngle - angleTemp) < 0)
-                //     turnLeft = 0;
-                // else
-                //     turnLeft = 1;
-                // Because has obstruction in front, the car must turn its direction.
-                // we must escape this action.
-                break;
-            }
-            // If nothing in front, the car will go straight.
-            compassPID();
-        }
-        while ((millis() - lastTime) < timeout);
-        /* -------- Return to normal ------- */
-        startAngle = angleTemp;
-        pid = 1;
+            delay(150);
+        // Go straight a few time (600 ms)
+        goStraightAFewTime(600);
     }
     else
     {
-        unsigned long lastTime = millis();
-        int timeout = 1500;
+        // unsigned long lastTime = millis();
+        // int timeout = 1500;
         // set motors are forward.
         motors.setRotation(true);
         // Do PID controller in 1.5 seconds if pid flag is up(pid=1).
@@ -113,11 +80,11 @@ void loop()
         //  - Watch something in front.
         do
         {
-            //compassPID();
-            noCompassPID();
+            compassPID();
+            //noCompassPID();
         }
-        while (((((millis() - lastTime) < timeout) || (((currentAngle - startAngle) > 2 || (currentAngle - startAngle) < -2)))
-                && !us.isDanger()) && pid);
+        while ((((((currentAngle - startAngle) > 2 || (currentAngle - startAngle) < -2))) && !us.isDanger()) && pid);
+        // turn off PID controller
         pid = 0;
         // Do straight in 1.5 seconds.
         do
@@ -133,10 +100,56 @@ void whichDirectToTurn()
     // compare current direction and previous direction
     // to decision car should turn right or turn left.
     // if turnLeft = 1 then turn left.
+    currentAngle = getAngle();
     if ((currentAngle - startAngle) < 0)
         turnLeft = 0;
-    else
+    else if ((currentAngle - startAngle) > 0)
         turnLeft = 1;
+    //turnLeft = !turnLeft;
+}
+
+void setTurnDirection()
+{
+    if (turnLeft)
+    {
+        motors.setMotors(170, 0);
+    }
+    else
+    {
+        motors.setMotors(0, 170);
+    }
+}
+
+void goStraightAFewTime(int timeout)
+{
+    angleTemp = startAngle;
+    startAngle = getAngle();
+    // delay a few time and fetch angle again.
+    delay(10);
+    startAngle = getAngle();
+
+    unsigned long lastTime = millis();
+
+    motors.setRotation(true);
+
+    // go straight in 1 second.
+    do
+    {
+        // if find something in front.
+        if (us.isDanger())
+        {
+            // Because has obstruction in front, the car must turn its direction.
+            // we must escape this action.
+            break;
+        }
+        // If nothing in front, the car will go straight.
+        compassPID();
+    }
+    while ((millis() - lastTime) < timeout);
+    /* -------- Return to normal ------- */
+    startAngle = angleTemp;
+    // turn on PID controller
+    pid = 1;
 }
 
 void compassPID()
@@ -161,7 +174,7 @@ void compassPID()
     //power_difference = (int) proportional * 250 / 100 + derivative * 100 / 10;
 
     // Motors speed.
-    int maxs = 250;
+    int maxs = 255;
 
     if (power_difference > maxs)
         power_difference = maxs;
@@ -177,10 +190,6 @@ void compassPID()
         motors.setMotors(maxs, maxs - power_difference);
     }
     /* ------ Compass PID Control End ------ */
-    // Serial.print(currentAngle);
-    // Serial.print("\t");
-    // Serial.print(power_difference);
-    // Serial.println();
 }
 
 // No PID controller. Only compare current angle and start angle.
@@ -189,14 +198,14 @@ void noCompassPID()
     // Fetch current angle.
     currentAngle = getAngle();
     // Decide motor 1 and motor 2 speed by compare angle.
-    if ((currentAngle - startAngle) > 5)
-        motors.setMotors(255, 0);
+    if ((currentAngle - startAngle) > 6)
+        motors.setMotors(250, 0);
     else if ((currentAngle - startAngle) > 2)
-        motors.setMotors(255, 130);
-    else if ((currentAngle - startAngle) < -5)
-        motors.setMotors(0, 255);
+        motors.setMotors(250, 150);
+    else if ((currentAngle - startAngle) < -6)
+        motors.setMotors(0, 250);
     else if ((currentAngle - startAngle) < -2)
-        motors.setMotors(130, 255);
+        motors.setMotors(150, 250);
 }
 
 // Get and calculate current angle.
