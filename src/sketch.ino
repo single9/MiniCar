@@ -77,7 +77,7 @@ void loop()
         startAngle = getAngle();
 
         unsigned long lastTime = millis();
-        int timeout = 800;
+        int timeout = 500;
 
         // go straight in 1 second.
         do
@@ -107,7 +107,7 @@ void loop()
         int timeout = 1500;
         // set motors are forward.
         motors.setRotation(true);
-        // Do PID controller in 1.5 seconds.
+        // Do PID controller in 1.5 seconds if pid flag is up(pid=1).
         // When is it stop?
         //  - Time up and the difference of angle between 5 and -5 degree.
         //  - Watch something in front.
@@ -116,7 +116,7 @@ void loop()
             //compassPID();
             noCompassPID();
         }
-        while (((((millis() - lastTime) < timeout) || (((currentAngle - startAngle) > 3 || (currentAngle - startAngle) < -3)))
+        while (((((millis() - lastTime) < timeout) || (((currentAngle - startAngle) > 2 || (currentAngle - startAngle) < -2)))
                 && !us.isDanger()) && pid);
         pid = 0;
         // Do straight in 1.5 seconds.
@@ -124,7 +124,7 @@ void loop()
         {
             motors.setMotors(255, 255);
         }
-        while (((millis() - lastTime)) < timeout && !us.isDanger());
+        while (!pid && !us.isDanger());
     }
 }
 
@@ -183,18 +183,19 @@ void compassPID()
     // Serial.println();
 }
 
+// No PID controller. Only compare current angle and start angle.
 void noCompassPID()
 {
     // Fetch current angle.
     currentAngle = getAngle();
-
-    if ((currentAngle - startAngle) > 15)
+    // Decide motor 1 and motor 2 speed by compare angle.
+    if ((currentAngle - startAngle) > 5)
         motors.setMotors(255, 0);
-    else if ((currentAngle - startAngle) > 3)
+    else if ((currentAngle - startAngle) > 2)
         motors.setMotors(255, 130);
-    else if ((currentAngle - startAngle) < -15)
+    else if ((currentAngle - startAngle) < -5)
         motors.setMotors(0, 255);
-    else if ((currentAngle - startAngle) < -3)
+    else if ((currentAngle - startAngle) < -2)
         motors.setMotors(130, 255);
 }
 
@@ -203,7 +204,7 @@ double getAngle()
 {
     // get x, y, z.
     compass.getHeading(&cx, &cy, &cz);
-    // calculate and return
+    // calculate the angle of 3 vectors.
     int angle = atan2((double) ((cx + yp) * yp2), (double) ((cz + xp) * 1)) * (180 / M_PI) + 180;
 
     // Make angle from physical to virtual.
