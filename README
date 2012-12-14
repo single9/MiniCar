@@ -11,6 +11,17 @@ MiniCar's source code.
   -sketch.ino
 
 =========== Change Log ===========
+2012/12/15
+ - Fix
+ -   Straight not straight
+ - Add new
+ -   goStraightAFewTime(int)
+ -   setTurnDirection()
+ -   And some others. Please read on bitbucket.
+ - Improve list
+ -   back to original track.
+ -   reduce dependency of electronic compass.
+ - Editor: Jing
 
 2012/12/13
  - Fix

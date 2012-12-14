@@ -12,7 +12,7 @@
 #include "HMC5883L.h"
 // Declare functions
 void whichDirectToTurn();
-void compassPID();
+void compassPID(int);
 void noCompassPID();
 double getAngle();
 void setTurnDirection();
@@ -32,7 +32,7 @@ int startAngle, currentAngle, adjAngle, adjAngle2;
 
 // PID arguments
 long proportional;
-int last_proportional, derivative, integral, power_difference, i, pid = 0;
+int last_proportional, derivative, integral, i, pid = 0;
 
 void setup()
 {
@@ -53,19 +53,24 @@ void setup()
 }
 
 // turnLeft is a flag for car that which direct turn.
-int angleTemp, turnLeft = 1;
+int angleTemp, turnLeft = 1, turnLong = 0;
 
 void loop()
 {
     if (us.isDanger())
     {
+        // ask
         whichDirectToTurn();
-        // Turn right/left until it's not in front.
+        // set the direction
         setTurnDirection();
-        // delay 100 milli seconds while it's dangerous.
+        // Turn right/left until it's not in front
+        // and delay 100 milli seconds while it's dangerous.
         while (us.isDanger())
+        {
             delay(150);
-        // Go straight a few time (600 ms)
+            turnLong++;
+        }
+        // Go straight in 600 ms if no obstruction.
         goStraightAFewTime(600);
     }
     else
@@ -80,7 +85,7 @@ void loop()
         //  - Watch something in front.
         do
         {
-            compassPID();
+            compassPID(100);
             //noCompassPID();
         }
         while ((((((currentAngle - startAngle) > 2 || (currentAngle - startAngle) < -2))) && !us.isDanger()) && pid);
@@ -90,6 +95,7 @@ void loop()
         do
         {
             motors.setMotors(255, 255);
+            //compassPID(150);
         }
         while (!pid && !us.isDanger());
     }
@@ -97,10 +103,13 @@ void loop()
 
 void whichDirectToTurn()
 {
+    // Fetch current angle.
+    currentAngle = getAngle();
+    delay(10);
+    currentAngle = getAngle();
     // compare current direction and previous direction
     // to decision car should turn right or turn left.
     // if turnLeft = 1 then turn left.
-    currentAngle = getAngle();
     if ((currentAngle - startAngle) < 0)
         turnLeft = 0;
     else if ((currentAngle - startAngle) > 0)
@@ -140,10 +149,11 @@ void goStraightAFewTime(int timeout)
         {
             // Because has obstruction in front, the car must turn its direction.
             // we must escape this action.
+            turnLong = 0;
             break;
         }
         // If nothing in front, the car will go straight.
-        compassPID();
+        compassPID(255);
     }
     while ((millis() - lastTime) < timeout);
     /* -------- Return to normal ------- */
@@ -152,7 +162,7 @@ void goStraightAFewTime(int timeout)
     pid = 1;
 }
 
-void compassPID()
+void compassPID(int speed)
 {
     // Fetch current angle.
     currentAngle = getAngle();
@@ -169,12 +179,12 @@ void compassPID()
 
     // power_difference = U = Kp * P + Ki * I + Dd * D
     //power_difference = (int) proportional * 132 / 1000 + integral / 400 + derivative * 47 / 10;
-    //power_difference = (int) proportional * 7 / 3 + integral / 5000 + derivative * 3 / 2;
-    power_difference = (int) proportional * 232 / 10 + derivative * 33 / 10;
+    //int power_difference = (int) proportional * 7 / 3 + integral / 5000 + derivative * 3 / 2;
+    int power_difference = (int) proportional * 232 / 50 + derivative * 33 / 10;
     //power_difference = (int) proportional * 250 / 100 + derivative * 100 / 10;
 
     // Motors speed.
-    int maxs = 255;
+    int maxs = speed;
 
     if (power_difference > maxs)
         power_difference = maxs;
@@ -197,15 +207,17 @@ void noCompassPID()
 {
     // Fetch current angle.
     currentAngle = getAngle();
+    delay(10);
+    currentAngle = getAngle();
     // Decide motor 1 and motor 2 speed by compare angle.
-    if ((currentAngle - startAngle) > 6)
-        motors.setMotors(250, 0);
+    if ((currentAngle - startAngle) > 10)
+        motors.setMotors(120, 0);
     else if ((currentAngle - startAngle) > 2)
-        motors.setMotors(250, 150);
+        motors.setMotors(70, 0);
     else if ((currentAngle - startAngle) < -6)
-        motors.setMotors(0, 250);
-    else if ((currentAngle - startAngle) < -2)
-        motors.setMotors(150, 250);
+        motors.setMotors(0, 120);
+    else if ((currentAngle - startAngle) < -10)
+        motors.setMotors(0, 70);
 }
 
 // Get and calculate current angle.
