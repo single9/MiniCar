@@ -71,7 +71,7 @@ void loop()
             turnLong++;
         }
         // Go straight in 600 ms if no obstruction.
-        goStraightAFewTime(600);
+        goStraightAFewTime(150);
     }
     else
     {
@@ -85,10 +85,10 @@ void loop()
         //  - Watch something in front.
         do
         {
-            compassPID(100);
-            //noCompassPID();
+            //compassPID(100);
+            noCompassPID();
         }
-        while ((((((currentAngle - startAngle) > 2 || (currentAngle - startAngle) < -2))) && !us.isDanger()) && pid);
+        while ((((((currentAngle - startAngle) > 1 || (currentAngle - startAngle) < -1))) && !us.isDanger()) && pid);
         // turn off PID controller
         pid = 0;
         // Do straight in 1.5 seconds.
